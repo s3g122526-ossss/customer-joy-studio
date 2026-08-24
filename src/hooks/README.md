@@ -14,3 +14,16 @@
   hydration) — reading it during render breaks SSR hydration.
 - Auth-dependent data belongs in `useQuery` in a component, never in a public
   route `loader` (SSR/prerender has no token and will 401).
+
+## `use-order-tracking.ts`
+
+`useOrderTracking(order, target?, { onStatusChange })` → `TrackingSnapshot | null`.
+
+Ticks once per second, recomputes the snapshot from `src/lib/tracking.ts` and
+mirrors the derived status back into the order store, so profile, notifications
+and the owner console stay in sync.
+
+**Django swap:** replace the interval with polling
+`GET /api/v1/orders/{code}/tracking/` (or subscribe to
+`/ws/orders/{code}/tracking/` via Channels) and `setSnapshot(response)`. The
+returned shape and every consumer stay unchanged.

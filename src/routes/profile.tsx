@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
@@ -23,19 +23,25 @@ import {
 import { toast } from "sonner";
 
 import { getLocalUser } from "@/hooks/use-session";
-import { TrackMap } from "@/components/kennedy/TrackMap";
 import {
   ORDER_STAGES,
   PAYMENTS,
+  RIDERS,
   loadAddresses,
   type Address,
   type OrderStatusKey,
 } from "@/lib/orders";
-import { fetchOrders, fetchProfile, type DbOrder } from "@/lib/account";
+import { DISHES } from "@/lib/menu";
+import { demoTargetFor } from "@/lib/tracking";
+import { createOrder, fetchOrders, fetchProfile, type DbOrder } from "@/lib/account";
+
 import { addToCart, dishBySlug, useLikes, useWishlist } from "@/lib/cart";
 import { fetchAssignedCaddy, type CaddyStatus } from "@/lib/caddy";
 import { ProfileBanner } from "@/components/profile/ProfileBanner";
 import { CaddyCard } from "@/components/profile/CaddyCard";
+import { OrderTracking } from "@/components/profile/OrderTracking";
+import { useOrderTracking } from "@/hooks/use-order-tracking";
+
 
 
 
@@ -224,9 +230,59 @@ function ProfilePage() {
       .toUpperCase() || "K";
 
   const address = (current?.address ?? null) as AddressWithCoords | null;
-  const target =
-    address?.lat != null && address?.lng != null ? { lat: address.lat, lng: address.lng } : null;
-  const rideStarted = current?.status === "onway";
+  const target = useMemo(
+    () =>
+      address?.lat != null && address?.lng != null
+        ? { lat: address.lat, lng: address.lng }
+        : null,
+    [address?.lat, address?.lng],
+  );
+
+  const onTrackingStatus = useCallback(() => {
+
+    void queryClient.invalidateQueries({ queryKey: ["orders", userId] });
+  }, [queryClient, userId]);
+
+  /** Live tracking snapshot (demo sim now, Django stream later). */
+  const tracking = useOrderTracking(current ?? null, target, {
+    onStatusChange: onTrackingStatus,
+  });
+
+  /**
+   * Demo-only: spawn a live order so tracking can be reviewed without checkout.
+   * Delete once Django creates real orders.
+   */
+  const startDemoDelivery = useCallback(async () => {
+    if (!userId) return;
+    const dish = DISHES[Math.floor(Math.random() * DISHES.length)]!;
+    const drop = demoTargetFor(`demo-${Date.now()}`);
+    await createOrder({
+      userId,
+      orderCode: `MG-${Math.floor(100000 + Math.random() * 899999)}`,
+      dishName: dish.name,
+      dishImage: dish.image,
+      size: "Regular",
+      qty: 1,
+      total: Number(String(dish.price).replace(/[^\d]/g, "")) || 1200,
+
+      payment: "cod",
+      address: {
+        id: `demo-${Date.now()}`,
+        label: "Demo drop",
+        name: profile?.full_name || "Kennedy guest",
+        phone: profile?.phone || "0300-0000000",
+        street: "Demo Street 12",
+        area: "Circular Road",
+        city: "Narowal",
+        ...drop,
+      } as Address,
+      rider: RIDERS[Math.floor(Math.random() * RIDERS.length)]!,
+    });
+    await queryClient.invalidateQueries({ queryKey: ["orders", userId] });
+    toast.success("Demo delivery started", { description: "Caddy aapki taraf nikal gaya." });
+  }, [userId, profile?.full_name, profile?.phone, queryClient]);
+
+
 
   return (
     <main className="min-h-screen bg-cream px-5 py-8 sm:px-8">
@@ -381,8 +437,12 @@ function ProfilePage() {
                   </h2>
                   {current ? (
                     <p className="mt-2 font-body text-sm text-charcoal/70">
-                      <span className="font-semibold text-flame">{stageLabel(current.status)}</span>{" "}
-                      — {current.dish_name} ({current.order_code}), ETA ~{current.eta_minutes} min.{" "}
+                      <span className="font-semibold text-flame">
+                        {stageLabel(tracking?.status ?? current.status)}
+                      </span>{" "}
+                      — {current.dish_name} ({current.order_code}), ETA ~
+                      {tracking?.etaMinutes ?? current.eta_minutes} min
+                      {tracking ? ` · ${tracking.remainingKm.toFixed(2)} km baaki` : ""}.{" "}
                       <button
                         type="button"
                         onClick={() => setTab("live")}
@@ -392,6 +452,7 @@ function ProfilePage() {
                       </button>
                     </p>
                   ) : (
+
                     <p className="mt-2 font-body text-sm text-charcoal/60">
                       Abhi koi active order nahi hai.{" "}
                       <Link to="/" className="font-semibold text-flame">
@@ -423,29 +484,38 @@ function ProfilePage() {
 
             {tab === "live" && (
               <section>
-                {current ? (
-                  <div className="grid gap-5 rounded-[1.75rem] border-2 border-charcoal/10 bg-white/70 p-5 lg:grid-cols-[1fr_1.1fr]">
-                    <div>
-                      <div className="flex items-center gap-3">
-                        {current.dish_image && (
-                          <img
-                            src={current.dish_image}
-                            alt={current.dish_name}
-                            className="h-16 w-16 rounded-xl object-cover"
-                          />
-                        )}
-                        <div>
-                          <p className="font-display text-sm font-extrabold uppercase text-charcoal">
-                            {current.dish_name}
-                          </p>
-                          <p className="font-body text-xs text-charcoal/60">
-                            {current.order_code} · {current.size} · {current.qty} items ·{" "}
-                            {money(current.total)}
-                          </p>
+                {current && tracking ? (
+                  <div className="space-y-5">
+                    <div className="grid gap-5 rounded-[1.75rem] border-2 border-charcoal/10 bg-white/70 p-5 lg:grid-cols-2">
+                      <div>
+                        <div className="flex items-center gap-3">
+                          {current.dish_image && (
+                            <img
+                              src={current.dish_image}
+                              alt={current.dish_name}
+                              className="h-16 w-16 rounded-xl object-cover"
+                            />
+                          )}
+                          <div>
+                            <p className="font-display text-sm font-extrabold uppercase text-charcoal">
+                              {current.dish_name}
+                            </p>
+                            <p className="font-body text-xs text-charcoal/60">
+                              {current.order_code} · {current.size} · {current.qty} items ·{" "}
+                              {money(current.total)}
+                            </p>
+                          </div>
                         </div>
+
+                        <p className="mt-3 rounded-2xl bg-charcoal/5 px-4 py-3 font-body text-[12px] text-charcoal/65">
+                          <MapPin className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+                          {[address?.street, address?.area, address?.city]
+                            .filter(Boolean)
+                            .join(", ") || "Address order ke saath save hoga"}
+                        </p>
                       </div>
 
-                      <div className="mt-4 grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-2 gap-2 self-start">
                         <MiniFact
                           icon={<CreditCard className="h-3.5 w-3.5" aria-hidden="true" />}
                           label="Payment"
@@ -454,79 +524,53 @@ function ProfilePage() {
                         <MiniFact
                           icon={<Timer className="h-3.5 w-3.5" aria-hidden="true" />}
                           label="ETA"
-                          value={`~${current.eta_minutes} min`}
+                          value={
+                            tracking.delivered ? "Delivered" : `~${tracking.etaMinutes} min`
+                          }
                         />
                         <MiniFact
                           icon={<Bike className="h-3.5 w-3.5" aria-hidden="true" />}
-                          label="Rider"
+                          label="Caddy"
                           value={current.rider?.name ?? "Assign ho raha"}
                         />
                         <MiniFact
                           icon={<Phone className="h-3.5 w-3.5" aria-hidden="true" />}
-                          label="Rider phone"
+                          label="Caddy phone"
                           value={current.rider?.phone ?? "—"}
                         />
                       </div>
+                    </div>
 
-                      <p className="mt-3 rounded-2xl bg-charcoal/5 px-4 py-3 font-body text-[12px] text-charcoal/65">
-                        <MapPin className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
-                        {[address?.street, address?.area, address?.city]
+                    <OrderTracking
+                      snapshot={tracking}
+                      riderName={current.rider?.name ?? "Caddy"}
+                      targetLabel={
+                        [address?.street, address?.area, address?.city]
                           .filter(Boolean)
-                          .join(", ") || "Address order ke saath save hoga"}
-                      </p>
-
-                      <ol className="mt-5 space-y-3">
-                        {ORDER_STAGES.map((stage) => {
-                          const done = stageIndex(current.status) >= stageIndex(stage.key);
-                          return (
-                            <li key={stage.key} className="flex gap-3">
-                              <span
-                                className={`mt-1 h-3 w-3 shrink-0 rounded-full ${
-                                  done ? "bg-flame" : "bg-charcoal/20"
-                                }`}
-                              />
-                              <span>
-                                <span
-                                  className={`block font-display text-xs font-extrabold uppercase ${
-                                    done ? "text-charcoal" : "text-charcoal/40"
-                                  }`}
-                                >
-                                  {stage.label}
-                                </span>
-                                <span className="block font-body text-[11px] text-charcoal/50">
-                                  {stage.hint}
-                                </span>
-                              </span>
-                            </li>
-                          );
-                        })}
-                      </ol>
-                    </div>
-
-                    <div>
-                      <TrackMap
-                        riderName={current.rider?.name ?? "Rider"}
-                        target={target}
-                        targetLabel={
-                          [address?.street, address?.area, address?.city]
-                            .filter(Boolean)
-                            .join(", ") || "Your location"
-                        }
-                        rideStarted={rideStarted}
-                      />
-                    </div>
+                          .join(", ") || "Your location"
+                      }
+                    />
                   </div>
                 ) : (
-                  <p className="rounded-2xl bg-charcoal/5 px-5 py-6 font-body text-sm text-charcoal/60">
+                  <div className="rounded-2xl bg-charcoal/5 px-5 py-6 font-body text-sm text-charcoal/60">
                     Koi live order nahi.{" "}
                     <Link to="/" className="font-semibold text-flame">
                       Kuch order karein
                     </Link>
                     .
-                  </p>
+                    <button
+                      type="button"
+                      onClick={() => void startDemoDelivery()}
+                      className="mt-4 block rounded-full bg-charcoal px-5 py-2.5 font-display text-[11px] font-extrabold uppercase tracking-[0.16em] text-cream transition-colors hover:bg-flame"
+                    >
+                      Start demo delivery
+                    </button>
+                  </div>
                 )}
+
               </section>
             )}
+
 
             {tab === "history" && (
               <section>
