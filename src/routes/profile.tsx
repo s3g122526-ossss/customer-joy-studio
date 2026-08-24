@@ -33,6 +33,10 @@ import {
 } from "@/lib/orders";
 import { fetchOrders, fetchProfile, type DbOrder } from "@/lib/account";
 import { addToCart, dishBySlug, useLikes, useWishlist } from "@/lib/cart";
+import { fetchAssignedCaddy, type CaddyStatus } from "@/lib/caddy";
+import { ProfileBanner } from "@/components/profile/ProfileBanner";
+import { CaddyCard } from "@/components/profile/CaddyCard";
+
 
 
 export const Route = createFileRoute("/profile")({
