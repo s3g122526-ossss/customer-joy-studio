@@ -123,6 +123,20 @@ function ProfilePage() {
     refetchInterval: 20000,
   });
 
+  const caddyStatus: CaddyStatus | null = ordersQuery.data?.some((o) => o.status !== "delivered")
+    ? ordersQuery.data.some((o) => o.status === "onway")
+      ? "onway"
+      : "picking"
+    : null;
+
+  const caddyQuery = useQuery({
+    queryKey: ["assigned-caddy", userId, caddyStatus],
+    queryFn: () => fetchAssignedCaddy(caddyStatus),
+    enabled: !!userId && !!caddyStatus,
+  });
+  const caddy = caddyQuery.data ?? null;
+
+
   const orders = ordersQuery.data ?? [];
   const current = useMemo(() => orders.find((o) => o.status !== "delivered"), [orders]);
   const past = useMemo(() => orders.filter((o) => o !== current), [orders, current]);
@@ -350,6 +364,16 @@ function ProfilePage() {
                     hint="Aksar isi se pay karte hain"
                   />
                 </div>
+
+                {caddy && (
+                  <CaddyCard
+                    caddy={caddy}
+                    onMessage={() =>
+                      toast.info("Chat hooks into POST /api/v1/orders/{id}/caddy/messages/.")
+                    }
+                  />
+                )}
+
 
                 <div className="rounded-[1.75rem] border-2 border-charcoal/10 bg-white/70 p-5">
                   <h2 className="font-display text-sm font-extrabold uppercase tracking-[0.18em] text-charcoal">
