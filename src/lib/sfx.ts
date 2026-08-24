@@ -8,6 +8,8 @@
  *   public/audio/urdu-ai.mp3   <- pre-recorded Urdu AI greeting
  */
 
+import clickAsset from "@/assets/click.wav.asset.json";
+
 export type SfxName =
   | "click"
   | "hover"
@@ -22,7 +24,8 @@ export type SfxName =
   | "swoosh";
 
 const FILES: Record<SfxName, string> = {
-  click: "/audio/click.mp3",
+  // Real UI click sound (CDN asset uploaded by the owner).
+  click: clickAsset.url,
   hover: "/audio/hover.mp3",
   notify: "/audio/notify.mp3",
   success: "/audio/success.mp3",
