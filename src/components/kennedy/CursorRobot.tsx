@@ -100,7 +100,7 @@ export function CursorRobot() {
           const a = pts[i - 1]!;
           const b = pts[i]!;
           const mx = (a.x + b.x) / 2;
-          const my = (a.y + b.y) / 2 + 8; // sag in the string
+          const my = (a.y + b.y) / 2 + 2; // barely any sag in the string
           d += ` Q ${mx} ${my} ${b.x} ${b.y}`;
         }
         pathRef.current.setAttribute("d", d);
