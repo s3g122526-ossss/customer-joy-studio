@@ -78,7 +78,11 @@ export function MenuBook() {
           style={{ "--i": 0 } as CSSProperties}
           onClick={(event) => {
             event.stopPropagation();
-            toggle(0, "Welcome to the Kennedy menu book");
+            toggle(
+              0,
+              `Welcome to the Kennedy menu book. First up, ${dishes[0]!.name}`,
+            );
+
           }}
           aria-pressed={coverOpen}
           aria-label="Open the menu book"
