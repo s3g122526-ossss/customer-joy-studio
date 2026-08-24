@@ -31,14 +31,18 @@ export function MenuBook() {
   const [open, setOpen] = useState<boolean[]>(() => Array(pageCount).fill(false));
   const coverOpen = open[0];
 
-  const toggle = useCallback((index: number, voice?: string) => {
-    setOpen((prev) => {
-      const next = prev.map((value, i) => (i === index ? !value : value));
-      playSfx(next[index] ? "swoosh" : "pop");
-      if (next[index] && voice) speak(voice);
-      return next;
-    });
-  }, []);
+  const toggle = useCallback(
+    (index: number, voice?: string) => {
+      // Decide the outcome here (not inside the state updater) so the sound
+      // always matches the page that is being revealed right now.
+      const willOpen = !open[index];
+      setOpen((prev) => prev.map((value, i) => (i === index ? !value : value)));
+      playSfx(willOpen ? "swoosh" : "pop");
+      if (willOpen && voice) speak(voice);
+    },
+    [open],
+  );
+
 
   const closeAll = useCallback(() => {
     setOpen((prev) => {
@@ -74,7 +78,11 @@ export function MenuBook() {
           style={{ "--i": 0 } as CSSProperties}
           onClick={(event) => {
             event.stopPropagation();
-            toggle(0, "Welcome to the Kennedy menu book");
+            toggle(
+              0,
+              `Welcome to the Kennedy menu book. First up, ${dishes[0]!.name}`,
+            );
+
           }}
           aria-pressed={coverOpen}
           aria-label="Open the menu book"

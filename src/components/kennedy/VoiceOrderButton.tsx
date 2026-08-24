@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Mic, Square, X, Loader2, Volume2, Sparkles, Wand2 } from "lucide-react";
+import { Mic, Square, X, Loader2, Volume2 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { voiceOrder } from "@/lib/voice.functions";
 import { playUrduVoice } from "@/lib/sfx";
+import caddyAvatar from "@/assets/caddy-avatar.jpg";
+
 
 
 type Turn = { role: "user" | "assistant"; content: string };
@@ -102,65 +104,47 @@ export function VoiceOrderButton() {
 
   return (
     <>
+      {/* Small caddy-style launcher: Takii, the voice guide */}
       <motion.button
         type="button"
         onClick={() => {
           setOpen(true);
           void greet();
         }}
-
-        initial={{ opacity: 0, y: 24, scale: 0.9 }}
+        initial={{ opacity: 0, y: 20, scale: 0.9 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ type: "spring", stiffness: 260, damping: 22, delay: 0.8 }}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.94 }}
-        className="magic-voice fixed bottom-5 right-4 z-[150] sm:bottom-8 sm:right-8"
-        aria-label="Magic Urdu voice order guide — AI se Urdu mein baat karein"
+        whileHover={{ scale: 1.04 }}
+        whileTap={{ scale: 0.95 }}
+        className="fixed bottom-5 right-4 z-[150] flex items-center gap-2 rounded-full border border-gold/40 bg-charcoal/90 py-1.5 pl-1.5 pr-3 shadow-[0_10px_26px_rgba(0,0,0,0.35)] backdrop-blur sm:bottom-8 sm:right-8"
+        aria-label="Takii — your voice guide. Urdu mein baat karein"
       >
-        <span
-          className="magic-voice__spark h-1.5 w-1.5"
-          style={{ top: "-4px", left: "18%", animationDelay: "0s" }}
-          aria-hidden="true"
-        />
-        <span
-          className="magic-voice__spark h-1 w-1"
-          style={{ bottom: "-2px", right: "26%", animationDelay: "0.8s" }}
-          aria-hidden="true"
-        />
-        <span
-          className="magic-voice__spark h-1 w-1"
-          style={{ top: "30%", right: "-5px", animationDelay: "1.5s" }}
-          aria-hidden="true"
-        />
-        <motion.span
-          className="relative flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-gold to-flame"
-          animate={{ rotate: [0, -14, 12, 0] }}
-          transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
-        >
+        <span className="relative flex h-8 w-8 shrink-0 items-center justify-center">
           <motion.span
-            className="absolute inset-0 rounded-full bg-gold/60"
-            animate={{ scale: [1, 1.8], opacity: [0.55, 0] }}
+            className="absolute inset-0 rounded-full bg-gold/40"
+            animate={{ scale: [1, 1.6], opacity: [0.5, 0] }}
             transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
             aria-hidden="true"
           />
-          <Wand2 className="relative h-4 w-4 text-charcoal" aria-hidden="true" />
-        </motion.span>
-        <span className="flex flex-col items-start leading-none">
-          <span className="text-[0.62rem] tracking-[0.22em] text-gold">Magic Guide</span>
-          <span className="mt-1">
-            <span className="hidden sm:inline">Urdu Voice Order</span>
-            <span className="sm:hidden">Urdu Order</span>
-          </span>
+          <img
+            src={caddyAvatar}
+            alt=""
+            aria-hidden="true"
+            className="relative h-8 w-8 rounded-full border border-gold/70 object-cover"
+          />
+          <span
+            className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border border-charcoal bg-emerald-400"
+            aria-hidden="true"
+          />
         </span>
-        <motion.span
-          animate={{ scale: [1, 1.25, 1], rotate: [0, 18, 0] }}
-          transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-        >
-          <Sparkles className="h-4 w-4 text-gold" aria-hidden="true" />
-        </motion.span>
-
+        <span className="flex flex-col items-start leading-none">
+          <span className="font-display text-xs font-extrabold uppercase tracking-wide text-cream">
+            Takii
+          </span>
+          <span className="mt-0.5 text-[0.6rem] tracking-[0.14em] text-gold">Voice guide</span>
+        </span>
+        <Mic className="h-3.5 w-3.5 text-gold" aria-hidden="true" />
       </motion.button>
-
 
       <AnimatePresence>
         {open && (
@@ -177,12 +161,19 @@ export function VoiceOrderButton() {
               exit={{ y: 40, opacity: 0 }}
               transition={{ type: "spring", stiffness: 320, damping: 30 }}
               onClick={(e) => e.stopPropagation()}
-              className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-cream shadow-[0_-20px_60px_rgba(0,0,0,0.35)] sm:rounded-3xl"
+              className="flex max-h-[80vh] w-full max-w-sm flex-col overflow-hidden rounded-t-3xl bg-cream shadow-[0_-20px_60px_rgba(0,0,0,0.35)] sm:rounded-3xl"
             >
-              <div className="flex items-center justify-between bg-flame px-5 py-4 text-cream">
-                <div>
-                  <p className="font-display text-lg font-extrabold uppercase">Kennedy Voice AI</p>
-                  <p className="font-body text-xs text-cream/85">
+              <div className="flex items-center gap-3 bg-charcoal px-4 py-3 text-cream">
+                <img
+                  src={caddyAvatar}
+                  alt="Takii, your voice guide"
+                  className="h-9 w-9 rounded-full border border-gold/70 object-cover"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="font-display text-sm font-extrabold uppercase tracking-wide">
+                    Takii · Voice guide
+                  </p>
+                  <p className="font-body text-[0.7rem] text-cream/75">
                     Urdu mein bolein — menu, mashwara aur order.
                   </p>
                 </div>
@@ -190,11 +181,12 @@ export function VoiceOrderButton() {
                   type="button"
                   onClick={() => setOpen(false)}
                   aria-label="Band karein"
-                  className="rounded-full bg-cream/20 p-2"
+                  className="rounded-full bg-cream/15 p-1.5"
                 >
                   <X className="h-4 w-4" aria-hidden="true" />
                 </button>
               </div>
+
 
               <div ref={scrollRef} className="min-h-[180px] flex-1 space-y-3 overflow-y-auto p-5">
                 {turns.length === 0 && !busy && (

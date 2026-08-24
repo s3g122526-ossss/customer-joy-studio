@@ -63,20 +63,22 @@ export function CursorRobot() {
     let opacity = 0;
 
     const frame = () => {
-      step(head, target.x, target.y, 0.24, 0.72);
+      // stiffer, quickly-settling springs: the string barely stretches now
+      step(head, target.x, target.y, 0.45, 0.55);
 
       let px = head.x;
       let py = head.y;
       beads.forEach((b, i) => {
-        const k = 0.2 - i * 0.022;
+        const k = 0.42 - i * 0.02;
         const gap = 26 + i * 2;
-        // hang point: a little below the bead above it (elastic + gravity)
-        step(b, px, py + gap, Math.max(0.06, k), 0.76);
+        // hang point: a little below the bead above it (near-rigid link)
+        step(b, px, py + gap, Math.max(0.3, k), 0.52);
         px = b.x;
         py = b.y;
       });
 
-      tilt += (Math.max(-26, Math.min(26, head.vx * 1.4)) - tilt) * 0.15;
+      tilt += (Math.max(-12, Math.min(12, head.vx * 0.8)) - tilt) * 0.15;
+
       squash += (1 - squash) * 0.12;
       opacity += (visible - opacity) * 0.12;
 
@@ -98,7 +100,7 @@ export function CursorRobot() {
           const a = pts[i - 1]!;
           const b = pts[i]!;
           const mx = (a.x + b.x) / 2;
-          const my = (a.y + b.y) / 2 + 8; // sag in the string
+          const my = (a.y + b.y) / 2 + 2; // barely any sag in the string
           d += ` Q ${mx} ${my} ${b.x} ${b.y}`;
         }
         pathRef.current.setAttribute("d", d);
