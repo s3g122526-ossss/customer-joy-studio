@@ -59,6 +59,12 @@ export type TrackMapProps = {
   targetLabel?: string;
   /** Simulated ride only starts once the order leaves the kitchen. */
   rideStarted?: boolean;
+  /**
+   * Externally driven courier position (from `useOrderTracking` / Django).
+   * When provided, the map stops running its own rider animation and simply
+   * follows this coordinate.
+   */
+  courier?: { lat: number; lng: number } | null;
 };
 
 export function TrackMap({
@@ -66,12 +72,27 @@ export function TrackMap({
   target,
   targetLabel = "Delivery target",
   rideStarted = true,
+  courier,
 }: TrackMapProps) {
+
   const ref = useRef<HTMLDivElement | null>(null);
   const [eta, setEta] = useState(18);
 
-  const drop = target ?? null;
+  // Stabilise coordinates so a new object each render never rebuilds the map.
+  const dropLat = target?.lat ?? null;
+  const dropLng = target?.lng ?? null;
+  const drop = useMemo(
+    () => (dropLat != null && dropLng != null ? { lat: dropLat, lng: dropLng } : null),
+    [dropLat, dropLng],
+  );
   const km = useMemo(() => (drop ? distanceKm(RESTAURANT, drop) : null), [drop]);
+
+  /** External courier control (courier prop present) vs internal animation. */
+  const externallyDriven = courier !== undefined;
+  const courierRef = useRef(courier);
+  courierRef.current = courier;
+  const riderRefs = useRef<{ marker: any; line: any } | null>(null);
+
 
   useEffect(() => {
     let cleanup = () => {};
@@ -146,6 +167,38 @@ export function TrackMap({
         map.fitBounds(line.getBounds().pad(0.4));
       }
 
+      // Externally driven courier (useOrderTracking / Django live location).
+      if (externallyDriven && drop) {
+        const riderIcon = L.divIcon({
+          className: "",
+          html: '<div style="background:#e8a93b;width:16px;height:16px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 2px #d6331f;"></div>',
+          iconSize: [16, 16],
+          iconAnchor: [8, 8],
+        });
+        const start = courierRef.current ?? { lat: RESTAURANT.lat, lng: RESTAURANT.lng };
+        const riderMarker = L.marker([start.lat, start.lng], { icon: riderIcon })
+          .addTo(map)
+          .bindPopup(`${riderName} · on the way`);
+        const riderLine = L.polyline(
+          [
+            [start.lat, start.lng],
+            [drop.lat, drop.lng],
+          ],
+          { color: "#d6331f", weight: 3 },
+        ).addTo(map);
+        if (!courierRef.current) {
+          riderMarker.setOpacity(0);
+          riderLine.setStyle({ opacity: 0 });
+        }
+        riderRefs.current = { marker: riderMarker, line: riderLine };
+
+        cleanup = () => {
+          riderRefs.current = null;
+          map.remove();
+        };
+        return;
+      }
+
       // Rider simulation only once the ride has actually started.
       if (rideStarted && drop) {
         let riderLat = RESTAURANT.lat;
@@ -202,14 +255,35 @@ export function TrackMap({
       cancelled = true;
       cleanup();
     };
-  }, [riderName, drop, targetLabel, rideStarted]);
+  }, [riderName, drop, targetLabel, rideStarted, externallyDriven]);
+
+  /** Follow the external courier coordinate without rebuilding the map. */
+  useEffect(() => {
+    const refs = riderRefs.current;
+    if (!externallyDriven || !refs || !courier || !drop) return;
+    refs.marker.setOpacity(1);
+    refs.line.setStyle({ opacity: 1 });
+    refs.marker.setLatLng([courier.lat, courier.lng]);
+    refs.line.setLatLngs([
+      [courier.lat, courier.lng],
+      [drop.lat, drop.lng],
+    ]);
+  }, [courier?.lat, courier?.lng, drop, externallyDriven]);
+
 
   return (
     <div className="space-y-3">
       <div className="relative overflow-hidden rounded-2xl border border-lux/20">
         <div ref={ref} className="h-64 w-full sm:h-80" />
         <span className="pointer-events-none absolute right-3 top-3 z-[500] rounded-full border border-lux/30 bg-ink/85 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.16em] text-lux">
-          {rideStarted && drop ? `ETA ${eta} min` : "Waiting for rider"}
+          {externallyDriven
+            ? courier
+              ? "Live · caddy moving"
+              : "Waiting for caddy"
+            : rideStarted && drop
+              ? `ETA ${eta} min`
+              : "Waiting for rider"}
+
         </span>
       </div>
 

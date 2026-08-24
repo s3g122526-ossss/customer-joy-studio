@@ -34,3 +34,20 @@ export async function fetchOrders(): Promise<DbOrder[]> {
 
 Keep the stub fallback: it is what lets the preview render before Django exists.
 Serializer field names must match the exported TypeScript types in each module.
+
+## `tracking.ts`
+
+Single source of truth for live order tracking: stage timeline + timestamps,
+courier position, remaining distance, ETA, speed and progress.
+
+| Endpoint | Returns |
+| --- | --- |
+| `GET /api/v1/orders/{code}/tracking/` | `TrackingSnapshot` |
+| `GET /api/v1/orders/{code}/tracking/stream/` | same payload over SSE / Channels WS |
+
+Snapshot fields: `order_code`, `status`, `placed_at`, `eta_at`, `progress`,
+`courier {lat,lng,speed_kmh}`, `origin`, `target`, `stages [{key, at}]`.
+
+Until then `simulateTracking()` produces the same shape locally and
+`demoTargetFor(orderCode)` invents a deterministic drop pin 0.9–2.4 km from the
+branch. Replace `simulateTracking` with `api.get(...)` — no component changes.
