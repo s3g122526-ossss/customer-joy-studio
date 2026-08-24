@@ -229,59 +229,35 @@ function ProfilePage() {
           </button>
         </div>
 
-        {/* hero */}
-        <motion.section
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-          className="mt-5 overflow-hidden rounded-[2rem] border-2 border-charcoal/10 bg-charcoal text-cream shadow-[0_26px_60px_rgba(20,14,10,0.25)]"
-        >
-          <div className="flex flex-col gap-6 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
-            <div className="flex items-center gap-4">
-              <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-flame font-display text-xl font-extrabold text-cream">
-                {initials}
-              </span>
-              <div className="min-w-0">
-                <h1 className="truncate font-display text-2xl font-extrabold uppercase sm:text-3xl">
-                  {displayName}
-                </h1>
-                <p className="truncate font-body text-sm text-cream/70">{email}</p>
-                {joined && (
-                  <p className="font-body text-[11px] text-cream/45">
-                    Member since {new Date(joined).toLocaleDateString("en-GB")}
-                  </p>
-                )}
-              </div>
-            </div>
-            <dl className="grid grid-cols-3 gap-3 text-center">
-              {[
-                ["Orders", String(orders.length)],
-                ["Spent", money(spent)],
-                ["Saved", String(wishlist.slugs.length + likes.slugs.length)],
-              ].map(([label, value]) => (
-                <div key={label} className="rounded-2xl bg-cream/10 px-4 py-3">
-                  <dt className="font-body text-[10px] uppercase tracking-widest text-cream/60">
-                    {label}
-                  </dt>
-                  <dd className="font-display text-base font-extrabold">{value}</dd>
-                </div>
-              ))}
-            </dl>
-          </div>
+        {/* hero banner + avatar */}
+        <ProfileBanner
+          name={displayName}
+          email={email}
+          joined={joined}
+          avatarUrl={profile?.avatar_url ?? null}
+          stats={[
+            { label: "Orders", value: String(orders.length) },
+            { label: "Spent", value: money(spent) },
+            { label: "Saved", value: String(wishlist.slugs.length + likes.slugs.length) },
+          ]}
+          onChangeAvatar={() =>
+            toast.info("Photo upload connects to PATCH /api/v1/profiles/me/ (see README).")
+          }
+        />
 
-          <div className="grid gap-px bg-cream/10 sm:grid-cols-3">
-            <Detail icon={<UserIcon className="h-4 w-4" aria-hidden="true" />} label="Name">
-              {profile?.full_name || "Added with your first order"}
-            </Detail>
-            <Detail icon={<Phone className="h-4 w-4" aria-hidden="true" />} label="Phone">
-              {profile?.phone || "Added with your first order"}
-            </Detail>
-            <Detail icon={<MapPin className="h-4 w-4" aria-hidden="true" />} label="Address">
-              {[profile?.street, profile?.city].filter(Boolean).join(", ") ||
-                "Added with your first order"}
-            </Detail>
-          </div>
-        </motion.section>
+        <section className="mt-4 grid gap-px overflow-hidden rounded-[1.5rem] border-2 border-charcoal/10 bg-charcoal/10 sm:grid-cols-3">
+          <Detail icon={<UserIcon className="h-4 w-4" aria-hidden="true" />} label="Name">
+            {profile?.full_name || "Added with your first order"}
+          </Detail>
+          <Detail icon={<Phone className="h-4 w-4" aria-hidden="true" />} label="Phone">
+            {profile?.phone || "Added with your first order"}
+          </Detail>
+          <Detail icon={<MapPin className="h-4 w-4" aria-hidden="true" />} label="Address">
+            {[profile?.street, profile?.city].filter(Boolean).join(", ") ||
+              "Added with your first order"}
+          </Detail>
+        </section>
+
 
         {/* tabs */}
         <nav className="scrollbar-none mt-6 flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible">
