@@ -26,9 +26,16 @@ export function SoundProvider() {
       return node;
     };
 
+    // Every pointer press anywhere clicks. Interactive elements can still
+    // override the sound with data-sfx="cart" etc.
     const onPointerDown = (event: Event) => {
       const node = hit(event.target);
-      if (!node) return;
+      const el = event.target as HTMLElement | null;
+      if (el?.closest?.("[data-no-sfx]")) return;
+      if (!node) {
+        playSfx("click");
+        return;
+      }
       const custom = node.getAttribute("data-sfx") as SfxName | null;
       const role = node.getAttribute("role");
       if (custom) playSfx(custom);
@@ -36,6 +43,7 @@ export function SoundProvider() {
         playSfx("toggle");
       else playSfx("click");
     };
+
 
     let lastHover: HTMLElement | null = null;
     const onPointerOver = (event: Event) => {
