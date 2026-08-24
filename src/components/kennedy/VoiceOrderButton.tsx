@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Mic, Square, X, Loader2, Volume2, Sparkles, Wand2 } from "lucide-react";
+import { Mic, Square, X, Loader2, Volume2 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { voiceOrder } from "@/lib/voice.functions";
 import { playUrduVoice } from "@/lib/sfx";
+import caddyAvatar from "@/assets/caddy-avatar.jpg";
+
 
 
 type Turn = { role: "user" | "assistant"; content: string };
