@@ -1,9 +1,13 @@
-import { useCallback, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { toast } from "sonner";
 
 import { DISHES } from "@/lib/menu";
+import { addToCart } from "@/lib/cart";
 import { isMuted, playSfx } from "@/lib/sfx";
+import caddyAvatar from "@/assets/caddy-avatar.jpg";
 
 const dishes = DISHES.map((dish) => ({
+  slug: dish.slug,
   name: dish.name,
   course: dish.tag,
   price: `PKR ${dish.price}`,
@@ -30,25 +34,45 @@ function speak(text: string) {
 export function MenuBook() {
   const [open, setOpen] = useState<boolean[]>(() => Array(pageCount).fill(false));
   const coverOpen = open[0];
+  // Guards against double-fire (pointer + click, or frantic tapping) which used
+  // to leave pages half-flipped and stack overlapping voice lines.
+  const lockRef = useRef(0);
+
+  useEffect(() => {
+    return () => {
+      if (typeof window !== "undefined") window.speechSynthesis?.cancel();
+    };
+  }, []);
 
   const toggle = useCallback(
     (index: number, voice?: string) => {
+      const now = Date.now();
+      if (now - lockRef.current < 320) return;
+      lockRef.current = now;
+
       // Decide the outcome here (not inside the state updater) so the sound
       // always matches the page that is being revealed right now.
       const willOpen = !open[index];
       setOpen((prev) => prev.map((value, i) => (i === index ? !value : value)));
       playSfx(willOpen ? "swoosh" : "pop");
+      if (typeof window !== "undefined") window.speechSynthesis?.cancel();
       if (willOpen && voice) speak(voice);
     },
     [open],
   );
 
-
   const closeAll = useCallback(() => {
+    if (typeof window !== "undefined") window.speechSynthesis?.cancel();
     setOpen((prev) => {
       if (prev.some(Boolean)) playSfx("pop");
       return Array(pageCount).fill(false);
     });
+  }, []);
+
+  const order = useCallback((slug: string, name: string) => {
+    addToCart(slug);
+    playSfx("cart");
+    toast.success(`${name} added to your order`);
   }, []);
 
   return (
@@ -78,19 +102,17 @@ export function MenuBook() {
           style={{ "--i": 0 } as CSSProperties}
           onClick={(event) => {
             event.stopPropagation();
-            toggle(
-              0,
-              `Welcome to the Kennedy menu book. First up, ${dishes[0]!.name}`,
-            );
-
+            toggle(0, `Welcome to the Kennedy menu book. First up, ${dishes[0]!.name}`);
           }}
           aria-pressed={coverOpen}
           aria-label="Open the menu book"
         >
           <div className="menu-page menu-page--cover-front">
             <span className="menu-cover__frame" aria-hidden="true" />
-            <span className="menu-cover__crest">K</span>
-            <span className="menu-cover__kicker">Moon Grill Narowal</span>
+            <span className="menu-cover__crest menu-cover__crest--caddy">
+              <img src={caddyAvatar} alt="" aria-hidden="true" />
+            </span>
+            <span className="menu-cover__kicker">Takii · Caddy Kitchen</span>
             <span className="menu-cover__title">Kennedy</span>
             <span className="menu-cover__flourish" aria-hidden="true">
               <span />
@@ -116,7 +138,8 @@ export function MenuBook() {
             <span className="menu-page__rule" />
             <p className="menu-page__desc">
               Every page is a dish. Tap a photo page to lift it and read the recipe, notes and price
-              on the back. Tap anywhere outside the book to lay all pages flat again.
+              on the back — then hit “Order this” to send it straight to your cart. Tap anywhere
+              outside the book to lay all pages flat again.
             </p>
             <div className="menu-page__notes">
               <span>{dishes.length} plates on the pass tonight</span>
@@ -130,12 +153,19 @@ export function MenuBook() {
         {dishes.map((dish, i) => {
           const index = i + 1;
           return (
-            <button
-              type="button"
+            <div
+              role="button"
+              tabIndex={0}
               key={dish.name}
               className={`menu-book__page${open[index] ? " is-open" : ""}`}
               style={{ "--i": index } as CSSProperties}
               onClick={(event) => {
+                event.stopPropagation();
+                toggle(index, dish.name);
+              }}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter" && event.key !== " ") return;
+                event.preventDefault();
                 event.stopPropagation();
                 toggle(index, dish.name);
               }}
@@ -165,9 +195,22 @@ export function MenuBook() {
                     <span key={note}>{note}</span>
                   ))}
                 </div>
-                <span className="menu-page__backprice">{dish.price}</span>
+                <div className="menu-page__buy">
+                  <span className="menu-page__backprice">{dish.price}</span>
+                  <button
+                    type="button"
+                    data-sfx="cart"
+                    className="menu-page__order"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      order(dish.slug, dish.name);
+                    }}
+                  >
+                    Order this
+                  </button>
+                </div>
               </div>
-            </button>
+            </div>
           );
         })}
       </div>
