@@ -1925,6 +1925,43 @@
   color: var(--book-ember-line);
 }
 
+.menu-page__buy {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.menu-page__order {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 0.5rem 0.85rem;
+  border-radius: 999px;
+  color: oklch(0.97 0.02 90);
+  background: linear-gradient(150deg, oklch(0.58 0.19 34), oklch(0.44 0.16 32));
+  box-shadow:
+    0 6px 14px oklch(0 0 0 / 0.28),
+    inset 0 0 0 1px oklch(0.85 0.15 88 / 0.45);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.menu-page__order:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 10px 20px oklch(0 0 0 / 0.32),
+    inset 0 0 0 1px oklch(0.85 0.15 88 / 0.7);
+}
+
+.menu-page__order:active {
+  transform: translateY(0) scale(0.97);
+}
+
+
 .menu-foot {
   position: relative;
   z-index: 12;
