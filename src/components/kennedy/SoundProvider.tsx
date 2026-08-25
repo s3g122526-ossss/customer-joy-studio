@@ -26,16 +26,12 @@ export function SoundProvider() {
       return node;
     };
 
-    // Every pointer press anywhere clicks. Interactive elements can still
-    // override the sound with data-sfx="cart" etc.
+    // Only real controls (buttons, links, toggles…) click. Pressing empty
+    // space, text or images stays silent.
     const onPointerDown = (event: Event) => {
       const node = hit(event.target);
-      const el = event.target as HTMLElement | null;
-      if (el?.closest?.("[data-no-sfx]")) return;
-      if (!node) {
-        playSfx("click");
-        return;
-      }
+      if (!node) return;
+      if ((event.target as HTMLElement | null)?.closest?.("[data-no-sfx]")) return;
       const custom = node.getAttribute("data-sfx") as SfxName | null;
       const role = node.getAttribute("role");
       if (custom) playSfx(custom);
@@ -43,6 +39,7 @@ export function SoundProvider() {
         playSfx("toggle");
       else playSfx("click");
     };
+
 
 
     let lastHover: HTMLElement | null = null;

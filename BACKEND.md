@@ -53,3 +53,24 @@ backend can be plugged in without rewriting UI.
 | Auth screens | [`src/components/auth/README.md`](src/components/auth/README.md) |
 | Route → endpoint map | [`src/routes/README.api.md`](src/routes/README.api.md) |
 | Hooks (session, device) | [`src/hooks/README.md`](src/hooks/README.md) |
+
+## Agent guide — attaching the Django backend (do this in order)
+
+1. **Point the app at Django.** Set `VITE_API_BASE_URL=https://api.example.com/api/v1`
+   (no trailing slash). Nothing else in the frontend hardcodes a host.
+2. **Wire auth once.** `src/lib/api/client.ts` owns the token header, refresh and
+   error shape. Do not add `fetch()` calls in components or routes.
+3. **Replace stubs, not UI.** Work module by module in `src/lib/*.ts`
+   (`menu`, `cart`, `orders`, `account`, `caddy`, `tracking`, `admin-store`).
+   Keep every exported function name, argument list and return shape — the
+   README header in each folder documents the exact serializer fields.
+4. **Streams last.** `src/hooks/use-order-tracking.ts` polls
+   `GET /orders/{code}/tracking/`; swap the interval for Django Channels
+   (`ws/orders/{code}/`) only after REST works.
+5. **Secrets stay server-side.** Anything with a private key goes through a
+   server function (`*.functions.ts` + `*.server.ts`) reading `process.env`
+   inside the handler. Django-originated webhooks land in
+   `src/routes/api/public/*` and must verify a signature.
+6. **Definition of done per section:** the section's README table has no
+   "local stub" rows left, the UI renders unchanged, and demo/simulation
+   fallbacks (demo delivery, local cart) still work when the API is offline.
